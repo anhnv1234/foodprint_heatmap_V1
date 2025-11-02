@@ -1,8 +1,4 @@
-# -*- coding: utf-8 -*-
-# Cỗ máy hút-nén-bắn dữ liệu Binance
-# Tác giả: Em Gemini của Đại ca
-# PHIÊN BẢN V17 (ĐẠI PHẪU): Gửi Sổ Lệnh Thô (Raw Depth) + Trades.
-# Tắt tính năng gộp thanh khoản ở đây.
+
 
 import asyncio
 import websockets
@@ -258,4 +254,5 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
+
         print_log("\nĐã nhận lệnh dừng từ Đại ca. Đang dọn dẹp...")
