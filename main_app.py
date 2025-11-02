@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-# FILE: main_app.py
-# Khối khởi động ứng dụng: Khởi chạy Backend và Frontend.
 
 import sys
 import threading
@@ -41,4 +38,5 @@ if __name__ == "__main__":
         # Gửi tín hiệu dừng cho luồng DuckDB
         db_queue.put(None)
         time.sleep(1) 
+
         sys.exit(0)
