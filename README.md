@@ -1,84 +1,141 @@
-Footprint Chart & Liquidity Heatmap Pro
-Chào mừng Đại ca đến với dự án Footprint Chart và Heatmap Thanh khoản, một công cụ phân tích thị trường tài chính hiệu suất cao được xây dựng hoàn toàn bằng Python.
-Dự án này cung cấp một cái nhìn sâu sắc về dòng lệnh (order flow) bằng cách hiển thị dữ liệu Footprint (khối lượng mua/bán tại từng mức giá) và một bản đồ nhiệt (heatmap) về thanh khoản (liquidity) trong sổ lệnh, tất cả đều được cập nhật theo thời gian thực.
-Tính Năng Nổi Bật
-Biểu đồ Footprint (Nến Dấu Chân): Hiển thị chi tiết khối lượng Mua (Ask) và Bán (Bid) tại từng mức giá bên trong mỗi cây nến.
-Heatmap Thanh Khoản (Live): Trực quan hóa sổ lệnh (order book) theo thời gian thực. Các lệnh lớn sẽ có màu sắc nổi bật và mờ dần theo thời gian (15 phút) nếu chúng bị hủy hoặc khớp.
-Heatmap Thanh Khoản (Lịch sử): (Chỉ cho 1M, 5M) Tải và hiển thị lịch sử thanh khoản đã được lưu trữ trong cơ sở dữ liệu DuckDB, cho phép Đại ca xem lại các vùng thanh khoản quan trọng trong quá khứ.
-Volume Profile (VPVR): Biểu đồ khối lượng theo giá cho toàn bộ phạm vi dữ liệu đang xem.
-Current Order Block (COB): Một thanh khoản kế (DOM) đơn giản hiển thị thanh khoản sổ lệnh hiện tại ngay bên cạnh biểu đồ.
-Đa Khung Thời Gian: Hỗ trợ nhiều timeframe (1M, 5M, 15M, 1H, 4H, 1D).
-Kiến trúc 3 Lớp (Multi-Process):
-Cỗ máy Hút (Data Collector): Thu thập dữ liệu thô từ Binance.
-Cỗ máy Chế Biến (Backend Processor): Xử lý, tổng hợp nến, và lưu trữ dữ liệu.
-Giao diện (Frontend UI): Hiển thị dữ liệu một cách mượt mà.
-Lưu trữ Lịch sử: Tự động lưu trữ lịch sử giao dịch vào file Parquet và lịch sử thanh khoản vào file DuckDB.
-Tùy chỉnh cao: Giao diện cho phép tùy chỉnh màu sắc, phông chữ, và các tham số gộp giá (grouping).
-Kiến Trúc Hệ Thống
-Hệ thống được thiết kế theo mô hình 3 thành phần riêng biệt để đảm bảo hiệu suất và độ ổn định:
-data_collector.py (Cỗ máy Hút - Nén - Bắn)
-Chức năng: Kết nối trực tiếp tới API WebSocket của Binance.
-Stream: Lắng nghe 2 stream: aggTrade (giao dịch) và depthUpdate (sổ lệnh).
-Nhiệm vụ: Lấy dữ liệu thô (raw data) và "bắn" ngay lập tức ra một máy chủ WebSocket nội bộ (trên cổng 8765).
-Lưu trữ: Ghi lại lịch sử giao dịch (trades) vào file btcusdt_aggtrades.parquet.
-backend_processor.py (Cỗ máy Chế Biến)
-Chức năng: Là bộ não của hệ thống. Nó chạy trên một luồng (thread) riêng biệt.
-Input: Kết nối và nhận dữ liệu thô từ data_collector.py (từ cổng 8765).
-Nhiệm vụ:
-Xử lý Trades: Tổng hợp các giao dịch thô thành các nến Footprint theo từng khung thời gian (1M, 5M, 15M...).
-Xử lý Thanh khoản: Nhận dữ liệu sổ lệnh thô và quẳng vào một hàng đợi (Queue).
-Lưu trữ CSDL: Một luồng (thread) "Nhân Viên Kho" (db_writer_thread) riêng biệt sẽ lấy dữ liệu từ hàng đợi và ghi vào cơ sở dữ liệu DuckDB (heatmap_history.duckdb).
-Output: Mở một máy chủ WebSocket khác (trên cổng 8766) để "bắn" dữ liệu đã được chế biến (nến Footprint, heatmap lịch sử, heatmap live) cho giao diện.
-frontend_ui.py & main_app.py (Giao diện Người dùng)
-Chức năng: Là ứng dụng Giao diện Đồ họa (GUI) mà Đại ca nhìn thấy.
-Công nghệ: PySide6 (Qt for Python).
-Input: Kết nối và nhận dữ liệu đã xử lý từ backend_processor.py (từ cổng 8766).
-Nhiệm vụ:
-Vẽ biểu đồ nến Footprint, VPVR, COB bằng QPainter.
-Quản lý các trạng thái (auto-scroll, zoom, pan).
-Gửi các yêu cầu (ví dụ: đổi timeframe, thay đổi cài đặt) về cho backend_processor.
-main_app.py: Là file khởi động, có nhiệm vụ chạy backend_processor trong luồng nền và sau đó khởi động frontend_ui ở luồng chính.
-Cài Đặt (Thư viện cần thiết)
-Để chạy dự án, Đại ca cần cài đặt các thư viện Python sau. Đại ca có thể tạo một file requirements.txt với nội dung bên dưới và chạy pip install -r requirements.txt.
-Nội dung requirements.txt:
-PySide6
-websockets
-python-binance
-pandas
-numpy
-aiohttp
-requests
-fastparquet
-duckdb
-Hoặc  có thể cài đặt thủ công:
-Bash
-pip install PySide6
-pip install websockets
-pip install python-binance
-pip install pandas
-pip install numpy
-pip install aiohttp
-pip install requests
-pip install fastparquet
-pip install duckdb
-Cách Chạy Ứng Dụng
-Đại ca cần chạy 2 file trong 2 cửa sổ Terminal (hoặc Command Prompt) riêng biệt. Thứ tự chạy rất quan trọng.
-Terminal 1: Chạy data_collector.py (Cỗ máy Hút)
-Bash
+# 🚀 Footprint Chart Trading System (V22.5)
+
+**Phiên bản:** V22.5 - "DuckDB Integration & Dynamic COB Scaling"  
+**Tác giả:** Đại ca & Gemini AI  
+**Trạng thái:** Production Ready  
+**Mục tiêu:** Phân tích Order Flow & Thanh khoản thị trường Crypto (BTCUSDT) thời gian thực.
+
+---
+
+## 📖 1. Tổng Quan Hệ Thống (System Overview)
+
+Hệ thống là bộ công cụ phân tích tài chính hiệu năng cao, được xây dựng để "đọc vị" thị trường thông qua dữ liệu **Order Flow**. Hệ thống không sử dụng thư viện vẽ biểu đồ có sẵn mà render trực tiếp bằng **PySide6 (Qt Painter)** để đạt tốc độ 60 FPS.
+
+### Các tính năng cốt lõi:
+* **Real-time Footprint:** Soi khối lượng Mua/Bán chủ động (Bid x Ask) trong từng nến.
+* **Liquidity Heatmap:** Lưu trữ và hiển thị lịch sử đặt lệnh Limit (Tường giá) dùng cơ sở dữ liệu DuckDB.
+* **Dynamic COB (Current Order Block):** Biểu đồ Depth of Market tự động co giãn theo vùng giá hiển thị.
+* **Volume Profile (VPVR):** Phân bổ khối lượng theo mức giá.
+
+---
+
+## 🏗️ 2. Kiến Trúc & Mô Hình (Architecture)
+
+Hệ thống hoạt động theo mô hình **Micro-services cục bộ** với kiến trúc 3 lớp, giao tiếp qua Websocket nội bộ:
+
+1.  **Lớp Thu Thập (Ingestion Layer):** `data_collector.py`
+2.  **Lớp Xử Lý (Processing Layer):** `backend_processor.py`
+3.  **Lớp Hiển Thị (Presentation Layer):** `frontend_ui.py`
+
+### Sơ đồ luồng dữ liệu (Data Flow Pipeline)
+
+```mermaid
+graph TD
+    Binance[Binance API] -->|Websocket: AggTrades + Depth| Collector(data_collector.py)
+    
+    subgraph "Lớp Lưu Trữ (Storage)"
+        Collector -->|Ghi file| Parquet[(btcusdt_aggtrades.parquet)]
+        Backend -->|Ghi DB| DuckDB[(heatmap_history.duckdb)]
+    end
+
+    Collector -->|Stream RAW (Port 8765)| Backend(backend_processor.py)
+    
+    Backend -->|Stream Processed JSON (Port 8766)| Frontend(frontend_ui.py)
+    Frontend -->|User Settings| Backend
+```
+
+---
+
+## 📂 3. Chi Tiết Từng Module (File Models & I/O)
+
+Mô tả chi tiết về mô hình hoạt động, dữ liệu đầu vào và đầu ra của từng thành phần:
+
+### A. `data_collector.py` (Máy Bơm Dữ Liệu)
+*Vai trò: Cổng kết nối duy nhất ra Internet, đảm bảo duy trì kết nối với sàn.*
+
+* **Mô hình:** Asyncio Event Loop (Single Thread).
+* **Chức năng:** Kết nối Websocket Binance (`aggTrade`, `depth`), tự động kết nối lại, quản lý bộ đệm và ghi file Parquet.
+* **Input:** Stream từ Binance Websocket, File lịch sử `.parquet`.
+* **Output:**
+    * Websocket Server (`ws://localhost:8765`): JSON thô.
+    * File: `btcusdt_aggtrades.parquet`.
+
+### B. `backend_processor.py` (Bộ Não Xử Lý)
+*Vai trò: Trung tâm xử lý logic, tính toán nến và quản lý DB Heatmap.*
+
+* **Mô hình:** Multi-threaded (1 Asyncio Thread + 1 DuckDB Writer Thread).
+* **Chức năng:** Gộp nến Footprint (1M, 5M...), ghi Orderbook vào DuckDB, truy vấn Heatmap lịch sử.
+* **Input:** Stream từ Collector (Port 8765), Settings từ Frontend.
+* **Output:**
+    * Websocket Server (`ws://localhost:8766`): JSON nến & Heatmap.
+    * Database: `heatmap_history.duckdb`.
+
+### C. `frontend_ui.py` (Giao Diện Hiển Thị)
+*Vai trò: Vẽ biểu đồ, tương tác người dùng.*
+
+* **Mô hình:** PySide6 Main Thread (GUI) + Worker Thread.
+* **Chức năng:** Render Engine (60 FPS), xử lý Zoom/Pan, Auto-Scaling COB.
+* **Input:** Stream JSON từ Backend (Port 8766), File `chart_settings.json`.
+* **Output:** Hình ảnh hiển thị, lệnh `update_settings` gửi về Backend.
+
+### D. `main_app.py` (Trình Khởi Động)
+*Vai trò: File chạy chính (Entry Point).*
+
+* **Chức năng:** Khởi tạo Thread Backend, khởi chạy GUI Frontend, đảm bảo tắt hệ thống an toàn (Graceful Shutdown).
+
+---
+
+## 🚀 4. Hướng Dẫn Cài Đặt & Chạy (How to Run)
+
+### Yêu cầu hệ thống
+* **OS:** Windows 10/11 (Khuyến nghị), Linux.
+* **Python:** 3.10 trở lên.
+* **RAM:** Tối thiểu 8GB (Khuyến nghị 16GB).
+
+### Bước 1: Cài đặt thư viện
+Cài đặt các thư viện cần thiết:
+
+```bash
+pip install PySide6 websockets python-binance pandas numpy aiohttp requests fastparquet duckdb
+```
+
+### Bước 2: Khởi động hệ thống
+Chạy theo thứ tự sau trên 2 cửa sổ Terminal khác nhau:
+
+**Terminal 1: Chạy Data Collector**
+```bash
 python data_collector.py
-Đại ca sẽ thấy các log thông báo đã kết nối tới Binance và sẵn sàng bắn data qua cổng 8765.
-Terminal 2: Chạy main_app.py (Ứng dụng chính)
-Bash
+```
+*Đợi thông báo: "HỆ THỐNG ĐÃ ONLINE"*
+
+**Terminal 2: Chạy Main App**
+```bash
 python main_app.py
-Sau khi chạy lệnh này, ứng dụng backend_processor sẽ tự động khởi động trong nền và giao diện (frontend) sẽ hiện lên. Giao diện sẽ tự động kết nối với backend, và backend sẽ kết nối với data collector.
-Chờ vài giây để dữ liệu bắt đầu chảy về và biểu đồ sẽ tự động được vẽ.
-Cấu Trúc File
-.
-├── main_app.py           # (File chạy chính) Khởi động Backend và Frontend
-├── backend_processor.py  # (Lớp 2) Xử lý dữ liệu, tạo nến Footprint, quản lý CSDL
-├── frontend_ui.py        # (Lớp 3) Toàn bộ code Giao diện (PySide6)
-├── data_collector.py     # (Lớp 1) Hút dữ liệu thô từ Binance
-│
-├── heatmap_history.duckdb  # (Tự tạo) Cơ sở dữ liệu lưu lịch sử thanh khoản
-├── btcusdt_aggtrades.parquet # (Tự tạo) File lưu lịch sử giao dịch
-└── chart_settings.json       # (Tự tạo) File lưu cài đặt giao diện (màu sắc, v.v.)
+```
+
+---
+
+## ⚙️ 5. Cấu Trúc Thư Mục Dự Án
+
+```text
+FootprintChart_V22.5/
+├── data_collector.py       # Service thu thập dữ liệu (Chạy độc lập)
+├── backend_processor.py    # Logic xử lý dữ liệu & Database (Chạy ngầm)
+├── frontend_ui.py          # Giao diện đồ họa PySide6
+├── main_app.py             # File khởi động chính
+├── chart_settings.json     # File lưu cài đặt người dùng (Tự sinh)
+├── requirements.txt        # Danh sách thư viện
+├── btcusdt_aggtrades.parquet # Data Trades lịch sử (Tự sinh/Tự tải)
+└── heatmap_history.duckdb    # Data Heatmap lịch sử (Tự sinh)
+```
+
+---
+
+## ⚠️ Lưu Ý Quan Trọng
+
+1.  **Dữ liệu Heatmap (DuckDB):** File `heatmap_history.duckdb` lưu trữ chi tiết Orderbook nên dung lượng có thể tăng nhanh. Hãy kiểm tra dung lượng ổ cứng định kỳ.
+2.  **Khởi động lần đầu:** Lần đầu tiên chạy, `data_collector` sẽ tốn thời gian (vài phút) để tải lịch sử Trade từ Binance về tạo file Parquet. Các lần sau sẽ nhanh hơn.
+3.  **Hiệu năng:** Nếu máy có cấu hình yếu, hãy tăng chỉ số **Price Grouping** trong phần Cài Đặt (ví dụ: chỉnh 5M Grouping lên 50) để giảm tải cho CPU/GPU khi vẽ chart.
+
+---
+*Developed by Đại ca & Gemini AI.*
