@@ -1,7 +1,7 @@
 # 🚀 Footprint Chart Trading System (V22.5)
 
 **Phiên bản:** V22.5 - "DuckDB Integration & Dynamic COB Scaling"  
-**Tác giả:** Đại ca & Gemini AI  
+**Tác giả:** Đại ca 
 **Trạng thái:** Production Ready  
 **Mục tiêu:** Phân tích Order Flow & Thanh khoản thị trường Crypto (BTCUSDT) thời gian thực.
 
@@ -138,4 +138,3 @@ FootprintChart_V22.5/
 3.  **Hiệu năng:** Nếu máy có cấu hình yếu, hãy tăng chỉ số **Price Grouping** trong phần Cài Đặt (ví dụ: chỉnh 5M Grouping lên 50) để giảm tải cho CPU/GPU khi vẽ chart.
 
 ---
-*Developed by Đại ca & Gemini AI.*
